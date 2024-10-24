@@ -9,7 +9,7 @@
     "host": "localhost:8080",
     "basePath": "/api",
     "paths": {
-        "/api/customers": {
+        "/customers": {
             "get": {
                 "description": "Get a list of all customers",
                 "produces": [
@@ -39,7 +39,7 @@
                 }
             }
         },
-        "/api/products": {
+        "/products": {
             "get": {
                 "description": "Get a list of all products",
                 "produces": [

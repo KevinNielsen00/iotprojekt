@@ -2,11 +2,13 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"log"
 	"net/http"
 	"os"
 
+	_ "my_app/docs"
+
+	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5"
 	"github.com/joho/godotenv"
 	httpSwagger "github.com/swaggo/http-swagger" // swagger middleware
@@ -37,7 +39,6 @@ type Product struct {
 // @description This is a sample API for managing customers and products.
 // @host localhost:8080
 // @BasePath /api
-
 func main() {
 	err := godotenv.Load()
 	if err != nil {
@@ -47,22 +48,21 @@ func main() {
 	connStr := os.Getenv("DATABASE_URL")
 	conn, err := pgx.Connect(context.Background(), connStr)
 	if err != nil {
-		log.Fatal("Error connecting to the database:", err) // Log connection error
+		log.Fatalf("Failed to connect to database: %v\n", err)
 	}
 	defer conn.Close(context.Background())
 
 	log.Println("Successfully connected to the database")
-	// Create tables and insert sample data here
 
-	// Log handlers registration
-	http.HandleFunc("/api/customers", fetchCustomersHandler)
-	http.HandleFunc("/api/products", fetchProductsHandler)
-	http.HandleFunc("/swagger/", httpSwagger.WrapHandler) // Swagger UI endpoint
+	r := gin.Default()
 
-	log.Println("Starting server on :8080") // Log server start
-	if err := http.ListenAndServe(":8080", nil); err != nil {
-		log.Fatal("Error starting server:", err) // Log server start error
-	}
+	// Define routes
+	r.GET("/api/customers", fetchCustomersHandler)
+	r.GET("/api/products", fetchProductsHandler)
+	r.GET("/swagger/*any", gin.WrapH(httpSwagger.WrapHandler)) // Swagger UI endpoint
+
+	// Start the server
+	log.Fatal(r.Run(":8080"))
 }
 
 // fetchCustomersHandler handles GET requests to fetch all customers
@@ -72,30 +72,21 @@ func main() {
 // @Produce json
 // @Success 200 {array} Customer
 // @Failure 500 {object} map[string]interface{}
-// @Router /api/customers [get]
-func fetchCustomersHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	log.Println("Received request to fetch customers") // Log when the handler is called
-	handleCustomerFetch(w)
-}
-
-// handleCustomerFetch is a helper function to fetch customers from the database
-func handleCustomerFetch(w http.ResponseWriter) {
+// @Router /customers [get]
+func fetchCustomersHandler(c *gin.Context) {
 	connStr := os.Getenv("DATABASE_URL")
-	log.Println("Connecting to database") // Log connection attempt
 	conn, err := pgx.Connect(context.Background(), connStr)
 	if err != nil {
-		http.Error(w, "Could not connect to database", http.StatusInternalServerError)
-		log.Println("Database connection error:", err)
+		log.Printf("Could not connect to database: %v\n", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not connect to database"})
 		return
 	}
 	defer conn.Close(context.Background())
 
-	log.Println("Querying customers from the database") // Log before querying
 	rows, err := conn.Query(context.Background(), "SELECT * FROM customers")
 	if err != nil {
-		http.Error(w, "Could not query customers", http.StatusInternalServerError)
-		log.Println("Query error:", err)
+		log.Printf("Could not query customers: %v\n", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not query customers"})
 		return
 	}
 	defer rows.Close()
@@ -104,16 +95,14 @@ func handleCustomerFetch(w http.ResponseWriter) {
 	for rows.Next() {
 		var customer Customer
 		if err := rows.Scan(&customer.CustomerNr, &customer.Firm, &customer.PhoneNr, &customer.Mail, &customer.Location); err != nil {
-			http.Error(w, "Could not scan customer", http.StatusInternalServerError)
-			log.Println("Scan error:", err)
+			log.Printf("Scan error: %v\n", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not scan customer"})
 			return
 		}
 		customers = append(customers, customer)
 	}
 
-	log.Printf("Successfully fetched %d customers", len(customers)) // Log successful fetch
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(customers)
+	c.JSON(http.StatusOK, customers)
 }
 
 // fetchProductsHandler handles GET requests to fetch all products
@@ -123,28 +112,21 @@ func handleCustomerFetch(w http.ResponseWriter) {
 // @Produce json
 // @Success 200 {array} Product
 // @Failure 500 {object} map[string]interface{}
-// @Router /api/products [get]
-func fetchProductsHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	log.Println("Received request to fetch products") // Log when the handler is called
-	handleProductFetch(w)
-}
-
-// handleProductFetch is a helper function to fetch products from the database
-func handleProductFetch(w http.ResponseWriter) {
+// @Router /products [get]
+func fetchProductsHandler(c *gin.Context) {
 	connStr := os.Getenv("DATABASE_URL")
 	conn, err := pgx.Connect(context.Background(), connStr)
 	if err != nil {
-		http.Error(w, "Could not connect to database", http.StatusInternalServerError)
-		log.Println("Database connection error:", err)
+		log.Printf("Could not connect to database: %v\n", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not connect to database"})
 		return
 	}
 	defer conn.Close(context.Background())
 
 	rows, err := conn.Query(context.Background(), "SELECT * FROM products")
 	if err != nil {
-		http.Error(w, "Could not query products", http.StatusInternalServerError)
-		log.Println("Query error:", err)
+		log.Printf("Could not query products: %v\n", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not query products"})
 		return
 	}
 	defer rows.Close()
@@ -153,13 +135,12 @@ func handleProductFetch(w http.ResponseWriter) {
 	for rows.Next() {
 		var product Product
 		if err := rows.Scan(&product.ProductID, &product.CustomerNr, &product.MeterID, &product.ProductNr, &product.OilType, &product.BarrelType, &product.Height); err != nil {
-			http.Error(w, "Could not scan product", http.StatusInternalServerError)
-			log.Println("Scan error:", err)
+			log.Printf("Scan error: %v\n", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not scan product"})
 			return
 		}
 		products = append(products, product)
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(products)
+	c.JSON(http.StatusOK, products)
 }

@@ -15,7 +15,7 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/api/customers": {
+        "/customers": {
             "get": {
                 "description": "Get a list of all customers",
                 "produces": [
@@ -45,7 +45,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/products": {
+        "/products": {
             "get": {
                 "description": "Get a list of all products",
                 "produces": [

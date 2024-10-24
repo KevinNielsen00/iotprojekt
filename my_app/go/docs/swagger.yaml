@@ -37,7 +37,7 @@ info:
   title: My API
   version: "1.0"
 paths:
-  /api/customers:
+  /customers:
     get:
       description: Get a list of all customers
       produces:
@@ -57,7 +57,7 @@ paths:
       summary: Get all customers
       tags:
       - customers
-  /api/products:
+  /products:
     get:
       description: Get a list of all products
       produces:
