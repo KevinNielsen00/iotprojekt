@@ -10,7 +10,6 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/joho/godotenv"
 	httpSwagger "github.com/swaggo/http-swagger" // swagger middleware
-	// swagger library
 )
 
 // Customer represents a customer record in the database
@@ -38,6 +37,7 @@ type Product struct {
 // @description This is a sample API for managing customers and products.
 // @host localhost:8080
 // @BasePath /api
+
 func main() {
 	err := godotenv.Load()
 	if err != nil {
@@ -47,46 +47,21 @@ func main() {
 	connStr := os.Getenv("DATABASE_URL")
 	conn, err := pgx.Connect(context.Background(), connStr)
 	if err != nil {
-		log.Fatal(err) // Log the error for debugging
+		log.Fatal("Error connecting to the database:", err) // Log connection error
 	}
 	defer conn.Close(context.Background())
 
-	// Create the customers table if it doesn't exist
-	_, err = conn.Exec(context.Background(), `CREATE TABLE IF NOT EXISTS customers (
-		customer_nr SERIAL PRIMARY KEY,
-		firm TEXT NOT NULL,
-		phone_nr TEXT,
-		mail TEXT,
-		location TEXT
-	);`)
-	if err != nil {
-		log.Fatal(err) // Log the error for debugging
-	}
+	log.Println("Successfully connected to the database")
+	// Create tables and insert sample data here
 
-	// Create the products table if it doesn't exist
-	_, err = conn.Exec(context.Background(), `CREATE TABLE IF NOT EXISTS products (
-		product_id SERIAL PRIMARY KEY,
-		customer_nr INT NOT NULL,
-		meter_id INT NOT NULL,
-		product_nr TEXT NOT NULL,
-		oil_type TEXT NOT NULL,
-		barrel_type TEXT NOT NULL,
-		height REAL NOT NULL,
-		FOREIGN KEY (customer_nr) REFERENCES customers(customer_nr) ON DELETE CASCADE
-	);`)
-	if err != nil {
-		log.Fatal(err) // Log the error for debugging
-	}
-
-	// Set up HTTP routes
+	// Log handlers registration
 	http.HandleFunc("/api/customers", fetchCustomersHandler)
 	http.HandleFunc("/api/products", fetchProductsHandler)
 	http.HandleFunc("/swagger/", httpSwagger.WrapHandler) // Swagger UI endpoint
 
-	// Start the server
-	log.Println("Starting server on :8080")
+	log.Println("Starting server on :8080") // Log server start
 	if err := http.ListenAndServe(":8080", nil); err != nil {
-		log.Fatal(err) // Log the error for debugging
+		log.Fatal("Error starting server:", err) // Log server start error
 	}
 }
 
@@ -99,19 +74,28 @@ func main() {
 // @Failure 500 {object} map[string]interface{}
 // @Router /api/customers [get]
 func fetchCustomersHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	log.Println("Received request to fetch customers") // Log when the handler is called
+	handleCustomerFetch(w)
+}
+
+// handleCustomerFetch is a helper function to fetch customers from the database
+func handleCustomerFetch(w http.ResponseWriter) {
 	connStr := os.Getenv("DATABASE_URL")
+	log.Println("Connecting to database") // Log connection attempt
 	conn, err := pgx.Connect(context.Background(), connStr)
 	if err != nil {
 		http.Error(w, "Could not connect to database", http.StatusInternalServerError)
-		log.Println("Database connection error:", err) // Log the error for debugging
+		log.Println("Database connection error:", err)
 		return
 	}
 	defer conn.Close(context.Background())
 
+	log.Println("Querying customers from the database") // Log before querying
 	rows, err := conn.Query(context.Background(), "SELECT * FROM customers")
 	if err != nil {
 		http.Error(w, "Could not query customers", http.StatusInternalServerError)
-		log.Println("Query error:", err) // Log the error for debugging
+		log.Println("Query error:", err)
 		return
 	}
 	defer rows.Close()
@@ -121,12 +105,13 @@ func fetchCustomersHandler(w http.ResponseWriter, r *http.Request) {
 		var customer Customer
 		if err := rows.Scan(&customer.CustomerNr, &customer.Firm, &customer.PhoneNr, &customer.Mail, &customer.Location); err != nil {
 			http.Error(w, "Could not scan customer", http.StatusInternalServerError)
-			log.Println("Scan error:", err) // Log the error for debugging
+			log.Println("Scan error:", err)
 			return
 		}
 		customers = append(customers, customer)
 	}
 
+	log.Printf("Successfully fetched %d customers", len(customers)) // Log successful fetch
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(customers)
 }
@@ -140,11 +125,18 @@ func fetchCustomersHandler(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} map[string]interface{}
 // @Router /api/products [get]
 func fetchProductsHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	log.Println("Received request to fetch products") // Log when the handler is called
+	handleProductFetch(w)
+}
+
+// handleProductFetch is a helper function to fetch products from the database
+func handleProductFetch(w http.ResponseWriter) {
 	connStr := os.Getenv("DATABASE_URL")
 	conn, err := pgx.Connect(context.Background(), connStr)
 	if err != nil {
 		http.Error(w, "Could not connect to database", http.StatusInternalServerError)
-		log.Println("Database connection error:", err) // Log the error for debugging
+		log.Println("Database connection error:", err)
 		return
 	}
 	defer conn.Close(context.Background())
@@ -152,7 +144,7 @@ func fetchProductsHandler(w http.ResponseWriter, r *http.Request) {
 	rows, err := conn.Query(context.Background(), "SELECT * FROM products")
 	if err != nil {
 		http.Error(w, "Could not query products", http.StatusInternalServerError)
-		log.Println("Query error:", err) // Log the error for debugging
+		log.Println("Query error:", err)
 		return
 	}
 	defer rows.Close()
@@ -162,7 +154,7 @@ func fetchProductsHandler(w http.ResponseWriter, r *http.Request) {
 		var product Product
 		if err := rows.Scan(&product.ProductID, &product.CustomerNr, &product.MeterID, &product.ProductNr, &product.OilType, &product.BarrelType, &product.Height); err != nil {
 			http.Error(w, "Could not scan product", http.StatusInternalServerError)
-			log.Println("Scan error:", err) // Log the error for debugging
+			log.Println("Scan error:", err)
 			return
 		}
 		products = append(products, product)
