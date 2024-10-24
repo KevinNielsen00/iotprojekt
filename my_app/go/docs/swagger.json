@@ -1,0 +1,121 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "This is a sample API for managing customers and products.",
+        "title": "My API",
+        "contact": {},
+        "version": "1.0"
+    },
+    "host": "localhost:8080",
+    "basePath": "/api",
+    "paths": {
+        "/api/customers": {
+            "get": {
+                "description": "Get a list of all customers",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "customers"
+                ],
+                "summary": "Get all customers",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/main.Customer"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/api/products": {
+            "get": {
+                "description": "Get a list of all products",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "products"
+                ],
+                "summary": "Get all products",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/main.Product"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "main.Customer": {
+            "type": "object",
+            "properties": {
+                "customer_nr": {
+                    "type": "integer"
+                },
+                "firm": {
+                    "type": "string"
+                },
+                "location": {
+                    "type": "string"
+                },
+                "mail": {
+                    "type": "string"
+                },
+                "phone_nr": {
+                    "type": "string"
+                }
+            }
+        },
+        "main.Product": {
+            "type": "object",
+            "properties": {
+                "barrel_type": {
+                    "type": "string"
+                },
+                "customer_nr": {
+                    "type": "integer"
+                },
+                "height": {
+                    "type": "number"
+                },
+                "meter_id": {
+                    "type": "integer"
+                },
+                "oil_type": {
+                    "type": "string"
+                },
+                "product_id": {
+                    "type": "integer"
+                },
+                "product_nr": {
+                    "type": "string"
+                }
+            }
+        }
+    }
+}

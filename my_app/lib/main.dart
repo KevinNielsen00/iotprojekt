@@ -76,7 +76,6 @@ class _BottomNavBarState extends State<BottomNavBar> {
     final themeColor = Theme.of(context).primaryColor;
     Widget page;
     
-    
     switch (selectedIndex) {
       case 0:
         page = const HomePage();
@@ -98,38 +97,33 @@ class _BottomNavBarState extends State<BottomNavBar> {
       body: Center(
         child: page,
       ),
-      bottomNavigationBar: Stack(
-        alignment: Alignment.topCenter,
-        clipBehavior: Clip.none,
-        children: [
-          BottomNavigationBar(
-            items: const <BottomNavigationBarItem>[
-              BottomNavigationBarItem(
-                icon: Icon(Icons.home),
-                label: 'Home',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.person),
-                label: 'Add Customer',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.add),
-                label: 'Add product',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.account_box),
-                label: 'Account',
-              ),
-            ],
-            currentIndex: selectedIndex,
-            selectedItemColor: Colors.black,
-            onTap: onItemTapped,
+      bottomNavigationBar: BottomNavigationBar(
+        items: const <BottomNavigationBarItem>[
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home),
+            label: 'Home',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person),
+            label: 'Add Customer',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.add),
+            label: 'Add Product',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.account_box),
+            label: 'Account',
           ),
         ],
+        currentIndex: selectedIndex,
+        selectedItemColor: Colors.black,
+        unselectedItemColor: const Color.fromARGB(255, 105, 105, 105),
+        backgroundColor: const Color.fromARGB(255, 255, 255, 255),
+        onTap: onItemTapped,
       ),
     );
   }
 }
-
 
 

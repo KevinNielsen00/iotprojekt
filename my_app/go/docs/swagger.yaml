@@ -1,0 +1,80 @@
+basePath: /api
+definitions:
+  main.Customer:
+    properties:
+      customer_nr:
+        type: integer
+      firm:
+        type: string
+      location:
+        type: string
+      mail:
+        type: string
+      phone_nr:
+        type: string
+    type: object
+  main.Product:
+    properties:
+      barrel_type:
+        type: string
+      customer_nr:
+        type: integer
+      height:
+        type: number
+      meter_id:
+        type: integer
+      oil_type:
+        type: string
+      product_id:
+        type: integer
+      product_nr:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: This is a sample API for managing customers and products.
+  title: My API
+  version: "1.0"
+paths:
+  /api/customers:
+    get:
+      description: Get a list of all customers
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/main.Customer'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get all customers
+      tags:
+      - customers
+  /api/products:
+    get:
+      description: Get a list of all products
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/main.Product'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get all products
+      tags:
+      - products
+swagger: "2.0"
