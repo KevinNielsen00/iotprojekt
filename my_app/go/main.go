@@ -34,6 +34,12 @@ type Product struct {
 	Height     float32 `json:"height"`
 }
 
+// ErrorResponse represents a structured error response
+type ErrorResponse struct {
+	Error   string `json:"error"`
+	Message string `json:"message,omitempty"`
+}
+
 // @title My API
 // @version 1.0
 // @description This is a sample API for managing customers and products.
@@ -61,6 +67,8 @@ func main() {
 	r.GET("/api/products", fetchProductsHandler)
 	r.GET("/swagger/*any", gin.WrapH(httpSwagger.WrapHandler)) // Swagger UI endpoint
 
+	r.POST("/api/customers", createCustomerHandler)
+
 	// Start the server
 	log.Fatal(r.Run(":8080"))
 }
@@ -71,14 +79,14 @@ func main() {
 // @Tags customers
 // @Produce json
 // @Success 200 {array} Customer
-// @Failure 500 {object} map[string]interface{}
+// @Failure 500 {object} ErrorResponse
 // @Router /customers [get]
 func fetchCustomersHandler(c *gin.Context) {
 	connStr := os.Getenv("DATABASE_URL")
 	conn, err := pgx.Connect(context.Background(), connStr)
 	if err != nil {
 		log.Printf("Could not connect to database: %v\n", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not connect to database"})
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Could not connect to database"})
 		return
 	}
 	defer conn.Close(context.Background())
@@ -86,7 +94,7 @@ func fetchCustomersHandler(c *gin.Context) {
 	rows, err := conn.Query(context.Background(), "SELECT * FROM customers")
 	if err != nil {
 		log.Printf("Could not query customers: %v\n", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not query customers"})
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Could not query customers"})
 		return
 	}
 	defer rows.Close()
@@ -96,7 +104,7 @@ func fetchCustomersHandler(c *gin.Context) {
 		var customer Customer
 		if err := rows.Scan(&customer.CustomerNr, &customer.Firm, &customer.PhoneNr, &customer.Mail, &customer.Location); err != nil {
 			log.Printf("Scan error: %v\n", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not scan customer"})
+			c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Could not scan customer"})
 			return
 		}
 		customers = append(customers, customer)
@@ -111,14 +119,14 @@ func fetchCustomersHandler(c *gin.Context) {
 // @Tags products
 // @Produce json
 // @Success 200 {array} Product
-// @Failure 500 {object} map[string]interface{}
+// @Failure 500 {object} ErrorResponse
 // @Router /products [get]
 func fetchProductsHandler(c *gin.Context) {
 	connStr := os.Getenv("DATABASE_URL")
 	conn, err := pgx.Connect(context.Background(), connStr)
 	if err != nil {
 		log.Printf("Could not connect to database: %v\n", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not connect to database"})
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Could not connect to database"})
 		return
 	}
 	defer conn.Close(context.Background())
@@ -126,7 +134,7 @@ func fetchProductsHandler(c *gin.Context) {
 	rows, err := conn.Query(context.Background(), "SELECT * FROM products")
 	if err != nil {
 		log.Printf("Could not query products: %v\n", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not query products"})
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Could not query products"})
 		return
 	}
 	defer rows.Close()
@@ -136,11 +144,53 @@ func fetchProductsHandler(c *gin.Context) {
 		var product Product
 		if err := rows.Scan(&product.ProductID, &product.CustomerNr, &product.MeterID, &product.ProductNr, &product.OilType, &product.BarrelType, &product.Height); err != nil {
 			log.Printf("Scan error: %v\n", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not scan product"})
+			c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Could not scan product"})
 			return
 		}
 		products = append(products, product)
 	}
 
 	c.JSON(http.StatusOK, products)
+}
+
+// createCustomerHandler handles POST requests to create a new customer
+// @Summary Create a new customer
+// @Description Add a new customer to the database
+// @Tags customers
+// @Accept json
+// @Produce json
+// @Param customer body Customer true "Customer data"
+// @Success 201 {object} map[string]string
+// @Failure 400 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /customers [post]
+func createCustomerHandler(c *gin.Context) {
+	var newCustomer Customer
+
+	// Bind the incoming JSON to the newCustomer struct
+	if err := c.BindJSON(&newCustomer); err != nil {
+		log.Printf("Invalid JSON format: %v\n", err)
+		c.JSON(http.StatusBadRequest, ErrorResponse{Error: "Invalid input"})
+		return
+	}
+
+	connStr := os.Getenv("DATABASE_URL")
+	conn, err := pgx.Connect(context.Background(), connStr)
+	if err != nil {
+		log.Printf("Could not connect to database: %v\n", err)
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Could not connect to database"})
+		return
+	}
+	defer conn.Close(context.Background())
+
+	// Insert the new customer into the database
+	query := `INSERT INTO customers (customer_nr, firm, phone_nr, mail, location) VALUES ($1, $2, $3, $4, $5)`
+	_, err = conn.Exec(context.Background(), query, newCustomer.CustomerNr, newCustomer.Firm, newCustomer.PhoneNr, newCustomer.Mail, newCustomer.Location)
+	if err != nil {
+		log.Printf("Could not insert customer: %v\n", err)
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Could not create customer"})
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{"message": "Customer created successfully"})
 }

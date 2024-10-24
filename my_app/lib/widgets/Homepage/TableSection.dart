@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../models/product.dart';
 import '../../models/customer.dart';
+import 'package:my_app/api/fetch_customer.dart';
+import 'package:my_app/api/fetch_product.dart';
 
 class MyTableSection extends StatefulWidget {
   const MyTableSection({super.key});
@@ -10,15 +12,8 @@ class MyTableSection extends StatefulWidget {
 }
 
 class _MyTableSectionState extends State<MyTableSection> {
-  List<Product> allProducts = [
-    Product(productNr: 1, customer: "John", firm: "Firm A", type1: "Type X", type2: "Type Y"),
-  ];
-
-  List<Customer> allCustomers = [
-    Customer(customerId: 1, name: "Jane", firm: "Firm B"),
-   
-  ];
-
+  List<Product> allProducts = [];
+  List<Customer> allCustomers = [];
   List<dynamic> displayedItems = [];
   TextEditingController searchController = TextEditingController();
   bool showProducts = true;
@@ -26,7 +21,32 @@ class _MyTableSectionState extends State<MyTableSection> {
   @override
   void initState() {
     super.initState();
-    displayedItems = allProducts; // all products
+    _fetchData(); // Fetch API data instead of hardcoded lists
+  }
+
+  void _fetchData() async {
+    try {
+      List<Product> products = await fetchProducts();
+      List<Customer> customers = await fetchCustomers();
+
+      setState(() {
+        allProducts = products;
+        allCustomers = customers;
+        displayedItems = allProducts; // Default to products
+      });
+    } catch (error) {
+      // Handle the error (e.g., show an error message)
+      print('Error fetching data: $error');
+    }
+  }
+
+  String _findFirmForProduct(int customerNr) {
+    // Find the corresponding customer by CustomerNr and return the firm
+    final customer = allCustomers.firstWhere(
+      (customer) => customer.customerNr == customerNr,
+      orElse: () => Customer(customerNr: -1, firm: 'Unknown', phoneNr: '', mail: '', location: '')
+    );
+    return customer.firm;
   }
 
   void _searchItems(String query) {
@@ -37,12 +57,15 @@ class _MyTableSectionState extends State<MyTableSection> {
       results = (showProducts ? allProducts : allCustomers).where((item) {
         if (showProducts) {
           Product product = item as Product;
-          return product.customer.toLowerCase().contains(query.toLowerCase()) ||
-                 product.firm.toLowerCase().contains(query.toLowerCase());
+          String firm = _findFirmForProduct(product.customerNr); // Get the firm's name for the product
+          return product.productNr.toLowerCase().contains(query.toLowerCase()) ||
+                 product.oilType.toLowerCase().contains(query.toLowerCase()) ||
+                 firm.toLowerCase().contains(query.toLowerCase());  // Add search by firm's name
         } else {
           Customer customer = item as Customer;
-          return customer.name.toLowerCase().contains(query.toLowerCase()) ||
-                 customer.firm.toLowerCase().contains(query.toLowerCase());
+          return customer.customerNr.toString().contains(query) || 
+                 customer.firm.toLowerCase().contains(query.toLowerCase()) ||
+                 customer.mail.toLowerCase().contains(query.toLowerCase());
         }
       }).toList();
     }
@@ -65,7 +88,7 @@ class _MyTableSectionState extends State<MyTableSection> {
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text('Customer Details'),
-          content: Text('Customer: ${customer.name}\nFirm: ${customer.firm}'),
+          content: Text('Customer: ${customer.customerNr}\nFirm: ${customer.firm}\nEmail: ${customer.mail}'),
           actions: [
             TextButton(
               onPressed: () {
@@ -113,33 +136,40 @@ class _MyTableSectionState extends State<MyTableSection> {
             columns: showProducts
                 ? [
                     const DataColumn(label: Text('Product Number')),
-                    const DataColumn(label: Text('Customer')),
+                    const DataColumn(label: Text('Customer Number')),
                     const DataColumn(label: Text('Firm')),
-                    const DataColumn(label: Text('Type 1')),
-                    const DataColumn(label: Text('Type 2')),
+                    const DataColumn(label: Text('Oil Type')),
+                    const DataColumn(label: Text('Barrel Type')),
+                    const DataColumn(label: Text('Height')),
                   ]
                 : [
-                    const DataColumn(label: Text('Customer ID')),
-                    const DataColumn(label: Text('Customer Name')),
+                    const DataColumn(label: Text('Customer Number')),
                     const DataColumn(label: Text('Firm')),
+                    const DataColumn(label: Text('Phone Number')),
+                    const DataColumn(label: Text('Email')),
+                    const DataColumn(label: Text('Location')),
                     const DataColumn(label: Text('Actions')),
                   ],
             rows: displayedItems.map((item) {
               if (showProducts) {
                 Product product = item as Product;
+                String firm = _findFirmForProduct(product.customerNr); // Find the firm's name for the product
                 return DataRow(cells: [
                   DataCell(Text(product.productNr.toString())),
-                  DataCell(Text(product.customer)),
-                  DataCell(Text(product.firm)),
-                  DataCell(Text(product.type1)),
-                  DataCell(Text(product.type2)),
+                  DataCell(Text(product.customerNr.toString())),
+                  DataCell(Text(firm)), // Display the firm of the product
+                  DataCell(Text(product.oilType)),
+                  DataCell(Text(product.barrelType)),
+                  DataCell(Text(product.height.toString())),
                 ]);
               } else {
                 Customer customer = item as Customer;
                 return DataRow(cells: [
-                  DataCell(Text(customer.customerId.toString())),
-                  DataCell(Text(customer.name)),
+                  DataCell(Text(customer.customerNr.toString())),
                   DataCell(Text(customer.firm)),
+                  DataCell(Text(customer.phoneNr)),
+                  DataCell(Text(customer.mail)),
+                  DataCell(Text(customer.location)),
                   DataCell(
                     ElevatedButton(
                       onPressed: () => _showCustomerPopup(context, customer),

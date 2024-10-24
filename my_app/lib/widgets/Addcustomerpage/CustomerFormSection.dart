@@ -1,6 +1,8 @@
 // ignore_for_file: avoid_print
 
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class CreateCustomerForm extends StatefulWidget {
   const CreateCustomerForm({Key? key}) : super(key: key);
@@ -16,19 +18,71 @@ class _CreateCustomerFormState extends State<CreateCustomerForm> {
   final TextEditingController emailController = TextEditingController();
   final TextEditingController locationController = TextEditingController();
 
-  void _submitForm() {
+  Future<void> _submitForm() async {
     String customerNumber = customerNumberController.text;
     String company = companyController.text;
     String phone = phoneController.text;
     String email = emailController.text;
     String location = locationController.text;
 
-    // Handle your form submission logic here
-    print('Customer Number: $customerNumber');
-    print('Company: $company');
-    print('Phone: $phone');
-    print('Email: $email');
-    print('Location: $location');
+    // Validate that CustomerNr and Firm are provided
+    if (customerNumber.isEmpty || company.isEmpty) {
+      // Show an error message
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Customer Number and Firm are required')),
+      );
+      return;
+    }
+
+    // Create a JSON object from the form data
+    Map<String, dynamic> customerData = {
+      'customer_nr': int.parse(customerNumber),  // Convert customer number to an integer
+      'firm': company,
+      'phone_nr': phone,
+      'mail': email,
+      'location': location,
+    };
+
+    // Proceed with the API request
+    try {
+      final response = await http.post(
+        Uri.parse('http://localhost:8080/api/customers'),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode(customerData),
+      );
+
+      if (response.statusCode == 201) {
+        print('Customer created successfully');
+        _clearForm();
+      } else {
+        // Provide more specific error handling based on status code
+        String errorMessage = 'Failed to create customer. Status code: ${response.statusCode}';
+        if (response.statusCode == 400) {
+          errorMessage = 'Bad request. Please check your input.';
+        } else if (response.statusCode == 500) {
+          errorMessage = 'Server error. Please try again later.';
+        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(errorMessage)),
+        );
+        print(errorMessage);
+      }
+    } catch (error) {
+      print('Error submitting form: $error');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('An error occurred. Please try again.')),
+      );
+    }
+  }
+
+  void _clearForm() {
+    customerNumberController.clear();
+    companyController.clear();
+    phoneController.clear();
+    emailController.clear();
+    locationController.clear();
   }
 
   @override
