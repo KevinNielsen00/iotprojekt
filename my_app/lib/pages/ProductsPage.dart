@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../widgets/appbar/appbar.dart';
+import 'package:my_app/widgets/Addproductpage/ProductFormSection.dart';
 
 
 
@@ -25,6 +26,7 @@ class ProductsPageContent extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          CreateProductForm(),
           SizedBox(height: 16),
           SizedBox(height: 16),
           SizedBox(height: 16),
