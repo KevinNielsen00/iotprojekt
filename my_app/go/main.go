@@ -68,6 +68,7 @@ func main() {
 	r.GET("/swagger/*any", gin.WrapH(httpSwagger.WrapHandler)) // Swagger UI endpoint
 
 	r.POST("/api/customers", createCustomerHandler)
+	r.POST("/api/products", createProductHandler)
 
 	// Start the server
 	log.Fatal(r.Run(":8080"))
@@ -193,4 +194,46 @@ func createCustomerHandler(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusCreated, gin.H{"message": "Customer created successfully"})
+}
+
+// createProductHandler handles POST requests to create a new product
+// @Summary Create a new product
+// @Description Add a new product to the database
+// @Tags products
+// @Accept json
+// @Produce json
+// @Param product body Product true "Product data"
+// @Success 201 {object} map[string]string
+// @Failure 400 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /products [post]
+func createProductHandler(c *gin.Context) {
+	var newProduct Product
+
+	// Bind the incoming JSON to the newProduct struct
+	if err := c.BindJSON(&newProduct); err != nil {
+		log.Printf("Invalid JSON format: %v\n", err)
+		c.JSON(http.StatusBadRequest, ErrorResponse{Error: "Invalid input"})
+		return
+	}
+
+	connStr := os.Getenv("DATABASE_URL")
+	conn, err := pgx.Connect(context.Background(), connStr)
+	if err != nil {
+		log.Printf("Could not connect to database: %v\n", err)
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Could not connect to database"})
+		return
+	}
+	defer conn.Close(context.Background())
+
+	// Insert the new product into the database
+	query := `INSERT INTO products (customer_nr, meter_id, product_nr, oil_type, barrel_type, height) VALUES ($1, $2, $3, $4, $5, $6)`
+	_, err = conn.Exec(context.Background(), query, newProduct.CustomerNr, newProduct.MeterID, newProduct.ProductNr, newProduct.OilType, newProduct.BarrelType, newProduct.Height)
+	if err != nil {
+		log.Printf("Could not insert product: %v\n", err)
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Could not create product"})
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{"message": "Product created successfully"})
 }
